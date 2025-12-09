@@ -1,14 +1,14 @@
 
 # Objetivo
 
-A proposta deste exercício era desenvolver um sistema de _troubleshooting_ para auxiliar técnicos e engenheiros na manutenção de aeronaves, baseando-se nos dados abertos disponíveis em (Aircraft Historical Maintenance Dataset)[https://www.kaggle.com/datasets/merishnasuwal/aircraft-historical-maintenance-dataset], no Kaggle.
+A proposta deste exercício era desenvolver um sistema de _troubleshooting_ para auxiliar técnicos e engenheiros na manutenção de aeronaves, baseando-se nos dados abertos disponíveis em [Aircraft Historical Maintenance Dataset](https://www.kaggle.com/datasets/merishnasuwal/aircraft-historical-maintenance-dataset), no Kaggle.
 
 O dataset é composto por uma série de problemas encontrados por engenheiros durante manutenções das aeronaves, e suas respectivas soluções. O objetivo final do projeto é produzir um sistema que receba descrições de problemas em aeronaves e retorne os problemas (e soluções) mais semelhantes encontrados na base.
 
 
 # Desenvolvimento
 
-O sistema desenvolvido tem como componente central uma base de dados vetorial, construída com (ChromaDB)[https://www.trychroma.com/], em que são armazenadas todas as descrições de problemas do _dataset_, associadas cada uma a um índice. Ao receber uma descrição de problema enviada pelo usuário, o sistema utiliza a base de dados vetorial para fazer uma busca e encontrar os problemas mais semelhantes. Para isso, é necessária uma função de _embeddings_ de texto, que transforma cada descrição de problema em um vetor que pode ser armazenado/buscado na base. A escolha do modelo de _embeddings_ a ser utilizado foi a etapa mais trabalhosa do projeto, pois não se limitou à avaliação dos modelos disponíveis, mas contemplou também uma etapa de ajuste fino destes modelos, a fim de obter o melhor desempenho para o sistema como um todo.
+O sistema desenvolvido tem como componente central uma base de dados vetorial, construída com [ChromaDB](https://www.trychroma.com/), em que são armazenadas todas as descrições de problemas do _dataset_, associadas cada uma a um índice. Ao receber uma descrição de problema enviada pelo usuário, o sistema utiliza a base de dados vetorial para fazer uma busca e encontrar os problemas mais semelhantes. Para isso, é necessária uma função de _embeddings_ de texto, que transforma cada descrição de problema em um vetor que pode ser armazenado/buscado na base. A escolha do modelo de _embeddings_ a ser utilizado foi a etapa mais trabalhosa do projeto, pois não se limitou à avaliação dos modelos disponíveis, mas contemplou também uma etapa de ajuste fino destes modelos, a fim de obter o melhor desempenho para o sistema como um todo.
 
 Todo o processo pode ser acompanhado através dos seguintes _scripts/notebooks_:
 
@@ -27,7 +27,7 @@ Este _script_ produz dois arquivos:
 
 Ao observar os dados, logo percebi que havia grandes grupos de descrições muito semelhantes entre si, quase idênticas, o que traria problemas para o método de refinar o modelo de _embeddings_, que é baseado na semelhança/dessemelhança entre sentenças. Para lidar com isso, elaborei essa etapa de clusterização dos dados, agrupando frases iguais ou quase iguais em grupos, e selecionando apenas 1 exemplo de cada grupo. Isso acabou por diminuir o tamanho do dataset, de 5.620 frases, para apenas 1.628.
 
-Este _notebook_ utiliza o modelo de _embeddings_ __multi-qa-mpnet-base-cos-v1__ e o algoritmo __DBSCAN__ (implementação do (scikit-learn)[https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html]) para fazer esse agrupamento. Primeiro, o modelo do (SentenceTransformers)[https://sbert.net/docs/sentence_transformer/pretrained_models.html] converte todas as frases da base em vetores, e então o DBSCAN calcula as distâncias entre esses vetores, utilizando essa métrica para agrupar os mais pŕoximos.
+Este _notebook_ utiliza o modelo de _embeddings_ __multi-qa-mpnet-base-cos-v1__ e o algoritmo __DBSCAN__ (implementação do [scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html)) para fazer esse agrupamento. Primeiro, o modelo do [SentenceTransformers](https://sbert.net/docs/sentence_transformer/pretrained_models.html) converte todas as frases da base em vetores, e então o DBSCAN calcula as distâncias entre esses vetores, utilizando essa métrica para agrupar os mais pŕoximos.
 
 O código produz um novo _dataset_, __problemas_dedup.csv__.
 
@@ -86,29 +86,30 @@ Para realizar o refinamento dos modelos, foi utilizado o próprio _framework_ de
 
 Num primeiro momento, foram treinados os 6 melhores modelos, cada um com dois _learning rates_ diferentes, de 5e-06 e 5e-05, por 4 épocas cada um. Ao final do treinamento, o modelo salvo tem os pesos do momento em que obteve a melhor performance quanto à métrica de _recall@1_, mesmo que isso tenha acontecido no início do treinamento.
 
-As métricas e estatísticas dos treinamentos foram logadas utilizando __WandB__, e podem ser conferidas (aqui)[https://wandb.ai/ana-sovat-/conserta-avioes_fine-tuning_01]
+As métricas e estatísticas dos treinamentos foram logadas utilizando __WandB__, e podem ser conferidas [aqui](https://wandb.ai/ana-sovat-/conserta-avioes_fine-tuning_01)
 
 No geral, os modelos apresentaram resultados melhores com o _learning rate_ maior, de 5e-05, o que me levou a fazer mais uma rodada de treinamento, com um _learning rate_ ainda maior, de 5e-04, apenas com os 4 melhores modelos. Os resultados, no entanto, mostram que esse com certeza é um valor muito alto para esses modelos e dados, mostrando um claro _over-fitting_ dos dados.
 
 Ao final do treinamento, cada modelo foi testado com o mesmo conjunto de testes utilizado no _benchmark_, com as mesmas métricas de _recall@k_. Os resultados foram salvos em __resultados_finetuning.csv__, mas também podem ser conferidos a seguir:
 
-|Modelo Base	|Learning Rate	|Recall@1	|Recall@3	|Recall@7
-|all-MiniLM-L6-v2	|5.00E-06	|0.924382716	|0.9768518519	|0.9969135802
-|all-MiniLM-L12-v2	|5.00E-06	|0.9552469136	|0.9938271605	|1
-|multi-qa-mpnet-base-dot-v1	|5.00E-06	|0.9583333333	|0.9938271605	|1
-|multi-qa-mpnet-base-cos-v1	|5.00E-06	|0.9691358025	|0.9969135802	|1
-|multi-qa-distilbert-cos-v1	|5.00E-06	|0.9429012346	|0.9891975309	|0.9969135802
-|multi-qa-MiniLM-L6-cos-v1	|5.00E-06	|0.9290123457	|0.9830246914	|0.9938271605
-|all-MiniLM-L6-v2	|5.00E-05	|0.950617284	|0.9830246914	|0.9984567901
-|all-MiniLM-L12-v2	|5.00E-05	|0.9675925926	|0.9953703704	|1
-|multi-qa-mpnet-base-dot-v1	|5.00E-05	|0.9614197531	|0.9891975309	|0.9984567901
-|multi-qa-mpnet-base-cos-v1	|5.00E-05	|0.9583333333	|0.9953703704	|0.9984567901
-|multi-qa-distilbert-cos-v1	|5.00E-05	|0.9614197531	|0.9891975309	|0.9984567901
-|multi-qa-MiniLM-L6-cos-v1	|5.00E-05	|0.9429012346	|0.9861111111	|0.9969135802
-|all-MiniLM-L6-v2	|0.0005	|0.8425925926	|0.9367283951	|0.9861111111
-|all-MiniLM-L12-v2	|0.0005	|0.6635802469	|0.7978395062	|0.8734567901
-|multi-qa-mpnet-base-cos-v1	|0.0005	|0.00462962963	|0.006172839506	|0.0262345679
-|multi-qa-distilbert-cos-v1	|0.0005	|0.4274691358	|0.5864197531	|0.7037037037
+|Modelo Base	|Learning Rate	|Recall@1	|Recall@3	|Recall@7|
+|----|----|----|----|----|
+|all-MiniLM-L6-v2	|5.00E-06	|0.924382716	|0.9768518519	|0.9969135802|
+|all-MiniLM-L12-v2	|5.00E-06	|0.9552469136	|0.9938271605	|1|
+|multi-qa-mpnet-base-dot-v1	|5.00E-06	|0.9583333333	|0.9938271605	|1|
+|multi-qa-mpnet-base-cos-v1	|5.00E-06	|0.9691358025	|0.9969135802	|1|
+|multi-qa-distilbert-cos-v1	|5.00E-06	|0.9429012346	|0.9891975309	|0.9969135802|
+|multi-qa-MiniLM-L6-cos-v1	|5.00E-06	|0.9290123457	|0.9830246914	|0.9938271605|
+|all-MiniLM-L6-v2	|5.00E-05	|0.950617284	|0.9830246914	|0.9984567901|
+|all-MiniLM-L12-v2	|5.00E-05	|0.9675925926	|0.9953703704	|1|
+|multi-qa-mpnet-base-dot-v1	|5.00E-05	|0.9614197531	|0.9891975309	|0.9984567901|
+|multi-qa-mpnet-base-cos-v1	|5.00E-05	|0.9583333333	|0.9953703704	|0.9984567901|
+|multi-qa-distilbert-cos-v1	|5.00E-05	|0.9614197531	|0.9891975309	|0.9984567901|
+|multi-qa-MiniLM-L6-cos-v1	|5.00E-05	|0.9429012346	|0.9861111111	|0.9969135802|
+|all-MiniLM-L6-v2	|0.0005	|0.8425925926	|0.9367283951	|0.9861111111|
+|all-MiniLM-L12-v2	|0.0005	|0.6635802469	|0.7978395062	|0.8734567901|
+|multi-qa-mpnet-base-cos-v1	|0.0005	|0.00462962963	|0.006172839506	|0.0262345679|
+|multi-qa-distilbert-cos-v1	|0.0005	|0.4274691358	|0.5864197531	|0.7037037037|
 
 ## 7 - Gráfico
 
