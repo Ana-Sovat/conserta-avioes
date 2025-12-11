@@ -86,7 +86,9 @@ Para realizar o refinamento dos modelos, foi utilizado o próprio _framework_ de
 
 Num primeiro momento, foram treinados os 6 melhores modelos, cada um com dois _learning rates_ diferentes, de 5e-06 e 5e-05, por 4 épocas cada um. Ao final do treinamento, o modelo salvo tem os pesos do momento em que obteve a melhor performance quanto à métrica de _recall@1_, mesmo que isso tenha acontecido no início do treinamento.
 
-As métricas e estatísticas dos treinamentos foram logadas utilizando __WandB__, e podem ser conferidas [aqui](https://wandb.ai/ana-sovat-/conserta-avioes_fine-tuning_01)
+As métricas e estatísticas dos treinamentos foram logadas utilizando __WandB__, gerando os seguintes gráficos:
+![Métricas de Validação](metricas_eval.png)
+![Métricas de Treino](metricas_treino.png)
 
 No geral, os modelos apresentaram resultados melhores com o _learning rate_ maior, de 5e-05, o que me levou a fazer mais uma rodada de treinamento, com um _learning rate_ ainda maior, de 5e-04, apenas com os 4 melhores modelos. Os resultados, no entanto, mostram que esse com certeza é um valor muito alto para esses modelos e dados, mostrando um claro _over-fitting_ dos dados.
 
